@@ -9,10 +9,14 @@ import (
 	"strings"
 )
 
-type GoogleSearch struct{}
+type GoogleSearch struct {
+	*BaseSearch
+}
 
 func NewGoogleSearch() *GoogleSearch {
-	return &GoogleSearch{}
+	return &GoogleSearch{
+		BaseSearch: NewBaseSearch(),
+	}
 }
 
 func (g *GoogleSearch) Name() string {
@@ -98,8 +102,63 @@ func (g *GoogleSearch) Execute(ctx context.Context, args map[string]interface{})
 		}, nil
 	}
 
-	result := strings.Join(links, "\n")
-	return &ToolResult{Output: result}, nil
+	if len(links) == 0 {
+		return &ToolResult{
+			Output: "No search results found. Note: Google may require more sophisticated parsing or API access.",
+		}, nil
+	}
+
+	var output strings.Builder
+	output.WriteString(fmt.Sprintf("Google Search Results for: %s\n\n", query))
+	for i, link := range links {
+		output.WriteString(fmt.Sprintf("%d. %s\n", i+1, link))
+	}
+
+	return &ToolResult{Output: output.String()}, nil
+}
+
+// Search implements SearchEngine interface
+func (g *GoogleSearch) Search(ctx context.Context, query string, numResults int) ([]SearchResult, error) {
+	searchURL := fmt.Sprintf("https://www.google.com/search?q=%s&num=%d",
+		url.QueryEscape(query), numResults)
+
+	resp, err := g.makeRequest(ctx, searchURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	links := g.extractLinksFromResponse(resp, numResults)
+	results := make([]SearchResult, len(links))
+	for i, link := range links {
+		results[i] = SearchResult{
+			Title: link,
+			URL:   link,
+		}
+	}
+
+	return results, nil
+}
+
+func (g *GoogleSearch) extractLinksFromResponse(resp *http.Response, maxResults int) []string {
+	defer resp.Body.Close()
+
+	body := make([]byte, 0)
+	buf := make([]byte, 4096)
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			body = append(body, buf[:n]...)
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	return g.extractLinks(string(body), maxResults)
 }
 
 // extractLinks 从 HTML 中提取链接（简化版）

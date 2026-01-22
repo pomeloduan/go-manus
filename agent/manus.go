@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"go-manus/tool"
 )
 
@@ -34,8 +35,6 @@ WebSearch: Unified web search supporting multiple engines (google, baidu, bing, 
 
 WebCrawler: Extract clean, AI-ready content from web pages. Perfect for content analysis and research.
 
-PythonExecute: Execute Python code. Note: Requires Python 3 to be installed.
-
 Planning: Create and manage plans for complex tasks. Track progress and manage multi-step workflows.
 
 CreateChatCompletion: Format the final response in a structured way (text, json, markdown).
@@ -64,7 +63,6 @@ If you want to stop the interaction at any point, use the terminate tool/functio
 		tool.NewStrReplaceEditor(),
 		tool.NewBash(),
 		tool.NewAskHuman(),
-		tool.NewPythonExecute(),
 		tool.NewWebCrawler(),
 		tool.NewPlanningTool(),
 		tool.NewCreateChatCompletion(),
